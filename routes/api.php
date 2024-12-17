@@ -30,7 +30,7 @@ Route::group(['prefix'=>'player'], function () {
     Route::get($idInThePath, [PlayerController::class, 'show']);
     Route::post('/', [PlayerController::class, 'store']);
     Route::put($idInThePath, [PlayerController::class, 'update']);
-    Route::delete($idInThePath, [PlayerController::class, 'destroy']);
+    Route::delete($idInThePath, [PlayerController::class, 'destroy'])->middleware('validatebearer');
 });
 
 Route::post('team/process', []);
