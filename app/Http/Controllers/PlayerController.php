@@ -13,7 +13,15 @@ class PlayerController extends Controller
 {
     public function index()
     {
-        return response("Failed", 500);
+        try {
+
+            $players = Player::all();
+
+            return response()->json($players, 200);
+        } catch (\Exception $e) {
+
+            return response("Failed", 500);  // Error interno del servidor
+        }
     }
 
     public function show()
@@ -45,7 +53,7 @@ class PlayerController extends Controller
             return response()->json(null, 204);
         } catch (\Exception $e) {
 
-            return response("Failed to delete player", 500);  // Error interno del servidor
+            return response("Failed", 500);  // Error interno del servidor
         }
     }
 }
