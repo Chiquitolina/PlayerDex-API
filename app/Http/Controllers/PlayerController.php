@@ -108,9 +108,12 @@ class PlayerController extends Controller
                 'player' => $player
             ], 200);
         } catch (ValidationException $e) {
+            $firstErrorField = array_key_first($e->errors());
+            $firstErrorValue = $request->input($firstErrorField);
+            $firstErrorMessage = $e->errors()[$firstErrorField][0];
+
             return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
+                'message' => "Invalid value for {$firstErrorField}: {$firstErrorValue}"
             ], 422);
         } catch (\Exception $e) {
             return response("Failed", 500);
