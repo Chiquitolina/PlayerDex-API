@@ -77,9 +77,44 @@ class PlayerController extends Controller
         }
     }
 
-    public function update()
+    public function update(Request $request, $id)
     {
-        return response("Failed", 500);
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'position' => ['required', 'string', Rule::in(array_map(fn($position) => $position->value, PlayerPosition::cases()))],
+                'playerSkills' => 'required|array',
+                'playerSkills.*.skill' => ['required', 'string', Rule::in(array_map(fn($position) => $position->value, PlayerSkill::cases()))],
+                'playerSkills.*.value' => 'required|integer|min:0|max:100',
+            ]);
+
+            $player = Player::findOrFail($id);
+
+            $player->update([
+                'name' => $validatedData['name'],
+                'position' => $validatedData['position'],
+            ]);
+
+            foreach ($validatedData['playerSkills'] as $skillData) {
+                $existingSkill = $player->skills()->where('skill', $skillData['skill'])->first();
+
+                if ($existingSkill) {
+                    $existingSkill->update(['value' => $skillData['value']]);
+                }
+            }
+
+            return response()->json([
+                'message' => 'Player updated successfully',
+                'player' => $player
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response("Failed", 500);
+        }
     }
 
     public function destroy($id)
