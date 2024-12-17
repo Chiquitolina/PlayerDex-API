@@ -7,6 +7,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Player;
+
 class PlayerController extends Controller
 {
     public function index()
@@ -29,8 +31,21 @@ class PlayerController extends Controller
         return response("Failed", 500);
     }
 
-    public function destroy()
+    public function destroy($id)
     {
-        return response("Failed", 500);
+        try {
+            $player = Player::find($id);
+
+            if (!$player) {
+                return response("Player not found", 404);
+            }
+
+            $player->delete();
+
+            return response()->json(null, 204);
+        } catch (\Exception $e) {
+
+            return response("Failed to delete player", 500);  // Error interno del servidor
+        }
     }
 }
