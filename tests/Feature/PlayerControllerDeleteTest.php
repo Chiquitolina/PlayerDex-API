@@ -16,4 +16,22 @@ class PlayerControllerDeleteTest extends PlayerControllerBaseTest
 
         $this->assertNotNull($res);
     }
+
+    public function test_delete_without_bearer_token_returns_401()
+    {
+        $res = $this->delete(self::REQ_URI . '1');
+
+        $res->assertStatus(401);
+    }
+
+    public function test_delete_with_invalid_authorization_token_returns_401()
+    {
+        $invalidToken = 'invalid_token_example';
+
+        $res = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $invalidToken,
+        ])->delete(self::REQ_URI . '1');
+
+        $res->assertStatus(401);
+    }
 }

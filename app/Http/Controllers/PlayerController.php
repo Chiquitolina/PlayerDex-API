@@ -21,16 +21,14 @@ class PlayerController extends Controller
     public function index()
     {
         try {
-            // Obtener todos los jugadores con sus habilidades
             $players = Player::with('skills')->get();
 
-            // Formatear los datos para la respuesta
             $formattedPlayers = $players->map(function ($player) {
                 return [
                     'id' => $player->id,
                     'name' => $player->name,
                     'position' => $player->position,
-                    'playerSkills' => $player->skills->map(function ($skill) {
+                    'playerSkills' => $player->getRelationValue('skills')->map(function ($skill) {
                         return [
                             'id' => $skill->id,
                             'skill' => $skill->skill,
@@ -55,7 +53,6 @@ class PlayerController extends Controller
     public function store(Request $request)
     {
         try {
-            // Validar los datos del jugador
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'position' => ['required', 'string', Rule::in(array_map(fn($position) => $position->value, PlayerPosition::cases()))],
@@ -64,28 +61,25 @@ class PlayerController extends Controller
                 'playerSkills.*.value' => 'required|integer|min:0|max:100',
             ]);
 
-            // Crear el jugador
             $player = Player::create([
                 'name' => $validatedData['name'],
                 'position' => $validatedData['position'],
             ]);
 
-            // Asociar habilidades al jugador
-            $playerSkills = [];
-            foreach ($validatedData['playerSkills'] as $skillData) {
+            $playerSkills = collect($validatedData['playerSkills'])->map(function ($skillData) use ($player) {
                 $skill = $player->skills()->create([
                     'skill' => $skillData['skill'],
                     'value' => $skillData['value'],
                 ]);
-                $playerSkills[] = [
+
+                return [
                     'id' => $skill->id,
                     'skill' => $skill->skill,
                     'value' => $skill->value,
                     'playerId' => $skill->player_id,
                 ];
-            }
+            })->toArray();
 
-            // Respuesta personalizada
             return response()->json([
                 'id' => $player->id,
                 'name' => $player->name,
@@ -93,20 +87,33 @@ class PlayerController extends Controller
                 'playerSkills' => $playerSkills,
             ], 201);
         } catch (ValidationException $e) {
-            // Captura la excepción de validación y personaliza la respuesta
+            $errors = $e->errors();
+
+            $firstErrorField = array_key_first($errors);
+            $firstErrorValue = $request->input($firstErrorField);
+            $firstErrorMessages = $errors[$firstErrorField];
+
+            if (is_array($firstErrorValue)) {
+                $firstErrorValue = json_encode($firstErrorValue);
+            }
+
             return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
+                'message' => "Invalid value for {$firstErrorField}: {$firstErrorValue}",
+                'errors' => [
+                    $firstErrorField => $firstErrorMessages,
+                ]
             ], 422);
         } catch (\Exception $e) {
-            return response("Failed", 500);  // Error interno del servidor
+            return response()->json([
+                'error' => 'An unexpected error occurred',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
     public function update(Request $request, $id)
     {
         try {
-            // Validar los datos de entrada
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'position' => ['required', 'string', Rule::in(array_map(fn($position) => $position->value, PlayerPosition::cases()))],
@@ -115,32 +122,27 @@ class PlayerController extends Controller
                 'playerSkills.*.value' => 'required|integer|min:0|max:100',
             ]);
 
-            // Buscar al jugador
             $player = Player::findOrFail($id);
 
-            // Actualizar el jugador
             $player->update([
                 'name' => $validatedData['name'],
                 'position' => $validatedData['position'],
             ]);
 
-            // Actualizar o crear las habilidades
-            $playerSkills = [];
-            foreach ($validatedData['playerSkills'] as $skillData) {
+            $playerSkills = collect($validatedData['playerSkills'])->map(function ($skillData) use ($player) {
                 $skill = $player->skills()->updateOrCreate(
-                    ['skill' => $skillData['skill']], // Condición para encontrar la habilidad
-                    ['value' => $skillData['value']]  // Datos a actualizar/crear
+                    ['skill' => $skillData['skill']],
+                    ['value' => $skillData['value']]
                 );
 
-                $playerSkills[] = [
+                return [
                     'id' => $skill->id,
                     'skill' => $skill->skill,
                     'value' => $skill->value,
                     'playerId' => $skill->player_id,
                 ];
-            }
+            })->toArray();
 
-            // Devolver la respuesta en el formato deseado
             return response()->json([
                 'id' => $id,
                 'name' => $player->name,
@@ -148,16 +150,27 @@ class PlayerController extends Controller
                 'playerSkills' => $playerSkills,
             ], 200);
         } catch (ValidationException $e) {
-            // Capturar y formatear el primer error
-            $firstErrorField = array_key_first($e->errors());
+            $errors = $e->errors();
+
+            $firstErrorField = array_key_first($errors);
             $firstErrorValue = $request->input($firstErrorField);
-            $firstErrorMessage = $e->errors()[$firstErrorField][0];
+            $firstErrorMessages = $errors[$firstErrorField];
+
+            if (is_array($firstErrorValue)) {
+                $firstErrorValue = json_encode($firstErrorValue);
+            }
 
             return response()->json([
-                'message' => "Invalid value for {$firstErrorField}: {$firstErrorValue}"
+                'message' => "Invalid value for {$firstErrorField}: {$firstErrorValue}",
+                'errors' => [
+                    $firstErrorField => $firstErrorMessages,
+                ]
             ], 422);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed'], 500);
+            return response()->json([
+                'error' => 'An unexpected error occurred',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -175,7 +188,10 @@ class PlayerController extends Controller
             return response()->json(null, 204);
         } catch (\Exception $e) {
 
-            return response("Failed", 500);  // Error interno del servidor
+            return response()->json([
+                'error' => 'An unexpected error occurred',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

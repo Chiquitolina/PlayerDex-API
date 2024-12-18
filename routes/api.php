@@ -25,7 +25,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::group(['prefix'=>'player'], function () {
+Route::group(['prefix' => 'player'], function () {
     $idInThePath = '/{id}';
     Route::get('/', [PlayerController::class, 'index']);
     Route::get($idInThePath, [PlayerController::class, 'show']);

@@ -31,4 +31,18 @@ class PlayerControllerUpdateTest extends PlayerControllerBaseTest
 
         $this->assertNotNull($res);
     }
+
+    public function test_update_player_without_playerSkills_returns_422()
+    {
+        $data = [
+            "name" => "test",
+            "position" => "defender"
+        ];
+
+        $res = $this->putJson(self::REQ_URI . '1', $data);
+
+        $res->assertStatus(422);
+
+        $res->assertJsonValidationErrors('playerSkills');
+    }
 }

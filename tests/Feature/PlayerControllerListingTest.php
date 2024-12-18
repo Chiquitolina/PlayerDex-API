@@ -16,4 +16,28 @@ class PlayerControllerListingTest extends PlayerControllerBaseTest
         $this->assertNotNull($res);
     }
 
+    public function test_get_players_returns_correct_data_returns_200()
+    {
+        $res = $this->get(self::REQ_URI);
+
+        $res->assertStatus(200);
+
+        $res->assertHeader('Content-Type', 'application/json');
+
+        $res->assertJsonStructure([
+            '*' => [
+                'id',
+                'name',
+                'position',
+                'playerSkills' => [
+                    '*' => [
+                        'id',
+                        'skill',
+                        'value',
+                        'playerId'
+                    ]
+                ]
+            ]
+        ]);
+    }
 }
