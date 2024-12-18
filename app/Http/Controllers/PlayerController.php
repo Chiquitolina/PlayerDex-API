@@ -21,12 +21,28 @@ class PlayerController extends Controller
     public function index()
     {
         try {
+            // Obtener todos los jugadores con sus habilidades
+            $players = Player::with('skills')->get();
 
-            $players = Player::all();
+            // Formatear los datos para la respuesta
+            $formattedPlayers = $players->map(function ($player) {
+                return [
+                    'id' => $player->id,
+                    'name' => $player->name,
+                    'position' => $player->position,
+                    'playerSkills' => $player->skills->map(function ($skill) {
+                        return [
+                            'id' => $skill->id,
+                            'skill' => $skill->skill,
+                            'value' => $skill->value,
+                            'playerId' => $skill->player_id,
+                        ];
+                    }),
+                ];
+            });
 
-            return response()->json($players, 200);
+            return response()->json($formattedPlayers, 200);
         } catch (\Exception $e) {
-
             return response("Failed", 500);  // Error interno del servidor
         }
     }
